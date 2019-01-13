@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ObjTrackControlPanel
+namespace ObjTracker.ControlPanel
 {
 	[Flags]
 	enum Command : byte

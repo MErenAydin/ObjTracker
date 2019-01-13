@@ -8,13 +8,13 @@ using System.Xml.Serialization;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace ObjTrackControlPanel
+namespace ObjTracker.ControlPanel
 {
 	public sealed class Settings : ICloneable
 	{
 		public static Settings Current = new Settings();
 
-		public static readonly string SettingsDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\ObjTrackControlPanel",
+		public static readonly string SettingsDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\ObjTracker.ControlPanel",
 			SettingsPath = SettingsDir + "\\settings.xml";
 
 		public int frameWidth = 640, frameHeight = 480, fps = 30;

@@ -1,4 +1,4 @@
-﻿namespace ObjTrackControlPanel
+﻿namespace ObjTracker.ControlPanel
 {
 	partial class MainForm
 	{

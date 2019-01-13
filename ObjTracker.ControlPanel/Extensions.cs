@@ -13,7 +13,7 @@ using System.Windows.Forms;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
 
-namespace ObjTrackControlPanel
+namespace ObjTracker.ControlPanel
 {
 	public static class Extensions
 	{

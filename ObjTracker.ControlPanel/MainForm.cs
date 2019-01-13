@@ -13,7 +13,7 @@ using System.Windows.Forms;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
 
-namespace ObjTrackControlPanel
+namespace ObjTracker.ControlPanel
 {
 	public partial class MainForm : Form
 	{
@@ -148,10 +148,10 @@ namespace ObjTrackControlPanel
 				GC.Collect();
 			}
 		}
-		
+
 		private void MainForm_Shown(object sender, EventArgs e)
 		{
-			textBox_Address.Select();   //Focus
+			textBox_Address.Select();
 		}
 
 		private void button_Connect_Click(object sender, EventArgs e)
@@ -257,7 +257,7 @@ namespace ObjTrackControlPanel
 				textBox_Address.BackColor = errorColor;
 		}
 		#endregion
-		
+
 		#region Mouse Commands
 		//Movement
 		private void button_MoveForward_MouseDown(object sender, MouseEventArgs e) =>
@@ -291,7 +291,7 @@ namespace ObjTrackControlPanel
 			else
 				command &= ~Command.MoveAuto;
 		}
-		
+
 		//Camera
 		private void button_CamUp_MouseDown(object sender, MouseEventArgs e) =>
 			command = command.HasFlag(Command.CamAuto) ? command : (command | Command.CamUp);
