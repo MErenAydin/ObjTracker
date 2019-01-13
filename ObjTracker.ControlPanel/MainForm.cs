@@ -127,11 +127,13 @@ namespace ObjTracker.ControlPanel
 			}
 			catch (EndOfStreamException ex)
 			{
-				
+				this.Invoke((MethodInvoker)(() => 
+				MessageBox.Show(this, ex.ToString(), "Stream Error", MessageBoxButtons.OK, MessageBoxIcon.Error)));
 			}
 			catch (IOException ex)
 			{
-
+				this.Invoke((MethodInvoker)(() =>
+				MessageBox.Show(this, ex.ToString(), "Stream Error", MessageBoxButtons.OK, MessageBoxIcon.Error)));
 			}
 			finally
 			{
