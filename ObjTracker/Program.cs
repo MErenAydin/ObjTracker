@@ -9,16 +9,28 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-
+using System.Linq;
 using OpenCvSharp;
 
 namespace ObjTracker
 {
-	internal static class Program
-	{
-		public static int Main(string[] args)
+    internal static class Program
+    {
+        
+
+
+
+        public static int Main(string[] args)
 		{
-			TcpListener listener = new TcpListener(IPAddress.Any, 5050);
+            Scalar greenLower = new Scalar(29, 86, 6);
+            Scalar greenUpper = new Scalar(64, 255, 255);
+            const string PORT = "COM5";
+            const int BAUD_RATE = 115200;
+            Console.WriteLine("Connecting Serial Port");
+            SerialPort serial = new SerialPort(PORT, BAUD_RATE);
+            serial.Open();
+            Console.WriteLine("Connected " + PORT + " with " + BAUD_RATE + " baud rate");
+            TcpListener listener = new TcpListener(IPAddress.Any, 5050);
 			re:
 			try
 			{
@@ -51,13 +63,53 @@ namespace ObjTracker
 								{
 									Console.WriteLine("Started video capturing...");
 									Mat imgMatrix = new Mat();
+                                    Mat mask = new Mat();
+                                    Mat tresh = new Mat();
 									try
 									{
 										while (client.Connected && stream.CanWrite)
 										{
 											if (cap.Read(imgMatrix))
 											{
-												Cv2.ImEncode(".jpg", imgMatrix, out byte[] result, encoderParam);
+
+                                                Cv2.CvtColor(imgMatrix, mask, ColorConversionCodes.BGR2HSV);
+
+                                                Cv2.InRange(mask, greenLower, greenUpper, tresh);
+
+                                                Cv2.Erode(tresh, tresh, null, iterations: 2);
+
+                                                Cv2.Dilate(tresh, tresh, null, iterations: 2);
+
+                                                Cv2.FindContours(
+                                                    tresh,
+                                                    out Point[][] contours,
+                                                    out HierarchyIndex[] hierarchyIndexes,
+                                                    RetrievalModes.External,
+                                                    ContourApproximationModes.ApproxSimple
+                                                    );
+
+                                                if (contours.Length > 0)
+                                                {
+                                                    contours.OrderBy(element => Cv2.ContourArea(element));
+                                                    Point[] max = contours[contours.Length - 1];
+
+                                                    Cv2.MinEnclosingCircle(max, out Point2f xy, out float radius);
+
+                                                    //Moments M = Cv2.Moments(max);
+                                                    //Point center = new Point((M.M10 / M.M00), (M.M01 / M.M00));
+
+                                                    Point center = new Point(xy.X, xy.Y);
+
+                                                    if (radius > 10.0f)
+                                                    {
+                                                        Cv2.Circle(imgMatrix, center, (int)radius, new Scalar(0, 255, 255), thickness: 2);
+                                                        Cv2.Circle(imgMatrix, center, 5, new Scalar(0, 0, 255), thickness: -1);
+                                                        
+                                                    }
+
+                                                }
+
+                                                Cv2.ImEncode(".jpg", imgMatrix, out byte[] result, encoderParam);
 												writer.Write(result.Length);
 												stream.Write(result, 0, result.Length);
 												Console.Write($"\r{result.Length}        ");
