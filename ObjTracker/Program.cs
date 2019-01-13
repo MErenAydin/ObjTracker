@@ -66,7 +66,7 @@ namespace ObjTracker
 									}
 									finally
 									{
-										Console.Error.WriteLine("\n");
+										Console.Error.WriteLine();
 									}
 								}
 							}
@@ -93,6 +93,7 @@ namespace ObjTracker
 			finally
 			{
 				listener.Stop();
+				Console.Error.WriteLine("\n");
 			}
 			//goto re;
 			return 0;
