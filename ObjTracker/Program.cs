@@ -20,7 +20,7 @@ namespace ObjTracker
 		static readonly Scalar greenLower = new Scalar(29, 86, 6);
 		static readonly Scalar greenUpper = new Scalar(64, 255, 255);
 
-		const string serialDevice = "Arduino Leonardo";
+		const string serialDevice = "Arduino Uno";
 		const int baudRate = 115200;
 
 		public static int Main(string[] args)
@@ -77,12 +77,27 @@ namespace ObjTracker
 									Mat imgMatrix = new Mat();
 									Mat mask = new Mat();
 									Mat tresh = new Mat();
+                                    
+
 									try
 									{
 										Scalar lastSeen = default(Scalar);
-										while (client.Connected && stream.CanWrite)
+                                        bool autoPilot = false,
+                                             camAuto = false,
+                                             moveAuto = false,
+                                             none;
+
+                                        while (client.Connected && stream.CanWrite)
 										{
-											if (cap.Read(imgMatrix))
+                                            Command commandTaken = (Command)reader.ReadByte();
+
+                                            autoPilot = commandTaken.HasFlag(Command.AutoPilot);
+                                            camAuto = commandTaken.HasFlag(Command.CamAuto);
+                                            moveAuto = commandTaken.HasFlag(Command.MoveAuto);
+                                            none = commandTaken == Command.None;
+
+                                           
+                                            if (cap.Read(imgMatrix))
 											{
 												Cv2.CvtColor(imgMatrix, mask, ColorConversionCodes.BGR2HSV);
 												Cv2.InRange(mask, greenLower, greenUpper, tresh);
@@ -123,34 +138,93 @@ namespace ObjTracker
 
 														lastSeen = FindBallCoordinates((int)radius, center, new Point(width / 2, height / 2));
 
-														#region Automatic Decisions
+                                                        #region Automatic Decisions
 
-														byte command = 0;
+                                                        Command command = 0;
 
-														if (xRegion < 1 && yRegion < 1)
-															command |= (byte)(Command.CamLeft | Command.CamUp);
-														else if (xRegion < 1 && yRegion > 1)
-															command |= (byte)(Command.CamLeft | Command.CamDown);
-														else if (xRegion > 1 && yRegion < 1)
-															command |= (byte)(Command.CamRight | Command.CamUp);
-														else if (xRegion > 1 && yRegion > 1)
-															command |= (byte)(Command.CamRight | Command.CamDown);
-														else if (xRegion < 1)
-															command |= (byte)Command.CamLeft;
-														else if (xRegion > 1)
-															command |= (byte)Command.CamRight;
-														else if (yRegion < 1)
-															command |= (byte)Command.CamUp;
-														else if (yRegion > 1)
-															command |= (byte)Command.CamDown;
-														if (zRegion > 1)
-															command |= (byte)Command.MoveBackward;
-														else if (zRegion < 1)
-															command |= (byte)Command.MoveForward;
+                                                        if (autoPilot)
+                                                        {
+                                                            
 
-														byte[] message = { command };
-														serial.Write(message, 0, 1);
+														    if (xRegion < 1 && yRegion < 1)
+															    command |= Command.CamLeft | Command.CamUp;
+														    else if (xRegion < 1 && yRegion > 1)
+															    command |= Command.CamLeft | Command.CamDown;
+														    else if (xRegion > 1 && yRegion < 1)
+															    command |= Command.CamRight | Command.CamUp;
+														    else if (xRegion > 1 && yRegion > 1)
+															    command |= Command.CamRight | Command.CamDown;
+														    else if (xRegion < 1)
+															    command |= Command.CamLeft;
+														    else if (xRegion > 1)
+															    command |= Command.CamRight;
+														    else if (yRegion < 1)
+															    command |= Command.CamUp;
+														    else if (yRegion > 1)
+															    command |= Command.CamDown;
+														    if (zRegion > 1)
+															    command |= Command.MoveBackward;
+														    else if (zRegion < 1)
+															    command |= Command.MoveForward;
 
+														    byte[] message = { (byte)command };
+														    serial.Write(message, 0, 1);
+
+                                                        }
+
+                                                        else if (camAuto)
+                                                        {
+
+                                                            if (xRegion < 1 && yRegion < 1)
+                                                                command |= Command.CamLeft | Command.CamUp;
+                                                            else if (xRegion < 1 && yRegion > 1)
+                                                                command |= Command.CamLeft | Command.CamDown;
+                                                            else if (xRegion > 1 && yRegion < 1)
+                                                                command |= Command.CamRight | Command.CamUp;
+                                                            else if (xRegion > 1 && yRegion > 1)
+                                                                command |= Command.CamRight | Command.CamDown;
+                                                            else if (xRegion < 1)
+                                                                command |= Command.CamLeft;
+                                                            else if (xRegion > 1)
+                                                                command |= Command.CamRight;
+                                                            else if (yRegion < 1)
+                                                                command |= Command.CamUp;
+                                                            else if (yRegion > 1)
+                                                                command |= Command.CamDown;
+
+                                                            byte[] message = { (byte)(command | (commandTaken & Command.MoveAuto))};
+														    serial.Write(message, 0, 1);
+                                                        }
+                                                        else if (moveAuto)
+                                                        {
+                                                            if (zRegion > 1 && xRegion < 1)
+                                                                command |= Command.MoveForward | Command.MoveLeft;
+                                                            else if (zRegion > 1 && xRegion > 1)
+                                                                command |= Command.MoveForward | Command.MoveRight;
+                                                            else if (zRegion < 1 && xRegion < 1)
+                                                                command |= Command.MoveBackward | Command.MoveRight;
+                                                            else if (zRegion <1 && xRegion >1)
+                                                                command |= Command.MoveBackward | Command.MoveLeft;
+                                                            else if (zRegion > 1)
+                                                                command |= Command.MoveBackward;
+                                                            else if (zRegion < 1)
+                                                                command |= Command.MoveForward;
+                                                            else if (xRegion < 1)
+                                                                command |= Command.MoveLeft;
+                                                            else if (xRegion > 1)
+                                                                command |= Command.MoveRight;
+
+                                                            byte[] message = { (byte)(command | (commandTaken & Command.CamAuto)) };
+                                                            serial.Write(message, 0, 1);
+                                                        }
+
+                                                        else if (none)
+                                                        {
+                                                            byte[] message = { (byte)(commandTaken) };
+                                                            serial.Write(message, 0, 1);
+                                                        }
+
+                                                        
 														#endregion
 													}
 													else

@@ -96,14 +96,15 @@ namespace ObjTracker.ControlPanel
 						{
 							while (Interlocked.Read(ref cancelled) == 0 && client.Connected && stream.CanRead)
 							{
-								int size = reader.ReadInt32();
-								if (size < 0)
+                                writer.Write((byte)command);
+                                int size = reader.ReadInt32();
+                                if (size < 0)
 									throw new ApplicationException(size.ToString());
 								{
 									byte[] imgBuffer = stream.ReadAll(size);
 									img = Cv2.ImDecode(imgBuffer, ImreadModes.Color);
-
-									if (img.Size() != OpenCvSharp.Size.Zero)
+                                    
+                                    if (img.Size() != OpenCvSharp.Size.Zero)
 									{
 										frameBox.Invoke(invoker); //Execute in UI thread
 										fpsCounter++;
@@ -114,7 +115,9 @@ namespace ObjTracker.ControlPanel
 										fps = fpsCounter;
 										fpsCounter = 0;
 									}
-								}
+
+                                    
+                                }
 								GC.Collect(0, GCCollectionMode.Forced, false, true);
 							}
 						}
