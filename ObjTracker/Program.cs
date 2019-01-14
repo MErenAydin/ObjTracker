@@ -16,12 +16,26 @@ namespace ObjTracker
 {
     internal static class Program
     {
-        
 
+        static int Map(this int x, int in_min, int in_max, int out_min, int out_max)
+        {
+            return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+        }
 
+        static Scalar FindBallCoordinates(int ballRadiusInPixel, Point centerOfBall, Point CENTER_OF_SCREEN, float BALL_DIAMETER = 6.5f)
+        {
+            //finding ball distance in cantimeters from camera with precalculated constants
+            double ballDist = 60 * 20 / (ballRadiusInPixel - 1);
+            //relative coordinates according to camera
+            double x = (centerOfBall.X - CENTER_OF_SCREEN.X) * BALL_DIAMETER / (ballRadiusInPixel - 1) / 2;
+            double y = (centerOfBall.Y - CENTER_OF_SCREEN.Y) * BALL_DIAMETER / (ballRadiusInPixel - 1) / 2;
+            double z = Math.Sqrt((Math.Pow(ballDist, 2) - Math.Pow(x, 2))) * 2;
+            return new Scalar(x, y, z);
+        }
 
         public static int Main(string[] args)
 		{
+            Scalar lastSeen = new Scalar();
             Scalar greenLower = new Scalar(29, 86, 6);
             Scalar greenUpper = new Scalar(64, 255, 255);
             const string PORT = "COM5";
@@ -88,6 +102,8 @@ namespace ObjTracker
                                                     ContourApproximationModes.ApproxSimple
                                                     );
 
+                                                
+
                                                 if (contours.Length > 0)
                                                 {
                                                     contours.OrderBy(element => Cv2.ContourArea(element));
@@ -98,21 +114,78 @@ namespace ObjTracker
                                                     //Moments M = Cv2.Moments(max);
                                                     //Point center = new Point((M.M10 / M.M00), (M.M01 / M.M00));
 
+
                                                     Point center = new Point(xy.X, xy.Y);
 
                                                     if (radius > 10.0f)
                                                     {
                                                         Cv2.Circle(imgMatrix, center, (int)radius, new Scalar(0, 255, 255), thickness: 2);
                                                         Cv2.Circle(imgMatrix, center, 5, new Scalar(0, 0, 255), thickness: -1);
-                                                        
+
+                                                        //find the ball which region on the screen horizontally [0-5]
+                                                        int xRegion = center.X.Map(0, width, 0, 3);
+                                                        //find the ball which region on the screen vertically [0-5]
+                                                        int yRegion = center.Y.Map(0, height, 0, 3);
+                                                        //find the ball is too far from camera or too close
+                                                        int zRegion = ((int)radius).Map(10, 400, 0, 3);
+
+                                                        lastSeen = FindBallCoordinates((int)radius, center, new Point(width / 2, height / 2));
+
+                                                        #region Automatic Decisions
+
+                                                        byte command = 0;
+
+                                                        if (xRegion < 1 && yRegion < 1)
+                                                            command |= (byte)(Command.CamLeft | Command.CamUp);
+
+                                                        else if (xRegion < 1 && yRegion > 1)
+                                                            command |= (byte)(Command.CamLeft | Command.CamDown);
+
+                                                        else if (xRegion > 1 && yRegion < 1)
+                                                            command |= (byte)(Command.CamRight | Command.CamUp);
+
+                                                        else if (xRegion > 1 && yRegion > 1)
+                                                            command |= (byte)(Command.CamRight | Command.CamDown);
+
+                                                        else if (xRegion < 1)
+                                                            command |= (byte)Command.CamLeft;
+
+                                                        else if (xRegion > 1)
+                                                            command |= (byte)Command.CamRight;
+
+                                                        else if (yRegion < 1)
+                                                            command |= (byte)Command.CamUp;
+
+                                                        else if (yRegion > 1)
+                                                            command |= (byte)Command.CamDown;
+
+                                                        if (zRegion > 1)
+                                                            command |= (byte)Command.MoveBackward;
+
+                                                        else if (zRegion < 1)
+                                                            command |= (byte)Command.MoveForward;
+
+
+
+                                                        byte[] message = { command };
+                                                        serial.Write(message, 0, 1);
+
+                                                        #endregion
+
+                                                    }
+                                                    else
+                                                    {
+                                                        Console.WriteLine($"{lastSeen.ToString()}");
                                                     }
 
+
                                                 }
+                                                
 
                                                 Cv2.ImEncode(".jpg", imgMatrix, out byte[] result, encoderParam);
 												writer.Write(result.Length);
 												stream.Write(result, 0, result.Length);
-												Console.Write($"\r{result.Length}        ");
+												//Console.Write($"\r{result.Length}        ");
 											}
 										}
 									}
